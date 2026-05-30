@@ -28,9 +28,9 @@ jobs:
         # React Native 0.81 headers use C++20 (requires keyword),
         # but NDK defaults to C++17 - add flag globally
         if [ -f android/app/build.gradle ]; then
-          sed -i '/defaultConfig {/a\            externalNativeBuild {\n                cmake {\n                    cppFlags "-std=c++20"\n                }\n            }' android/app/build.gradle
+          sed -i '/defaultConfig {/a\            externalNativeBuild {\n                cmake {\n                    arguments "-DCMAKE_CXX_STANDARD=20", "-DCMAKE_CXX_STANDARD_REQUIRED=ON"\n                }\n            }' android/app/build.gradle
         elif [ -f android/app/build.gradle.kts ]; then
-          sed -i '/defaultConfig {/a\            externalNativeBuild {\n                cmake {\n                    cppFlags += "-std=c++20"\n                }\n            }' android/app/build.gradle.kts
+          sed -i '/defaultConfig {/a\            externalNativeBuild {\n                cmake {\n                    arguments("-DCMAKE_CXX_STANDARD=20", "-DCMAKE_CXX_STANDARD_REQUIRED=ON")\n                }\n            }' android/app/build.gradle.kts
         fi
 
     - name: Setup ccache

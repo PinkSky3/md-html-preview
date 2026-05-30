@@ -1,9 +1,9 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, forwardRef } from 'react';
 import { Platform, Keyboard, KeyboardAvoidingView } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-const KeyboardAvoidingAnimatedView = (props, ref) => {
+const KeyboardAvoidingAnimatedView = forwardRef((props, ref) => {
   const {
     children,
     behavior = Platform.OS === 'ios' ? 'padding' : 'height',
@@ -46,12 +46,12 @@ const KeyboardAvoidingAnimatedView = (props, ref) => {
       bottomRef.current = 0;
     };
 
-    Keyboard.addListener('keyboardWillShow', onKeyboardShow);
-    Keyboard.addListener('keyboardWillHide', onKeyboardHide);
+    const showSubscription = Keyboard.addListener('keyboardWillShow', onKeyboardShow);
+    const hideSubscription = Keyboard.addListener('keyboardWillHide', onKeyboardHide);
 
     return () => {
-      Keyboard.removeAllListeners('keyboardWillShow');
-      Keyboard.removeAllListeners('keyboardWillHide');
+      showSubscription.remove();
+      hideSubscription.remove();
     };
   }, [keyboardVerticalOffset, enabled, bottomHeight]);
 
@@ -129,7 +129,7 @@ const KeyboardAvoidingAnimatedView = (props, ref) => {
       {renderContent()}
     </Animated.View>
   );
-};
+});
 
 KeyboardAvoidingAnimatedView.displayName = 'KeyboardAvoidingAnimatedView';
 

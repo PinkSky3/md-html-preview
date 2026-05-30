@@ -22,10 +22,10 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm install --ignore-scripts --legacy-peer-deps
 
     - name: Prebuild Expo project
-      run: npx expo prebuild
+      run: npx expo prebuild --no-install
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4

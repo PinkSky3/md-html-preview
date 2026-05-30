@@ -1,4 +1,4 @@
-import config from '@anythingai/app/tailwind.config'
+const config = require('@anythingai/app/tailwind.config')
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {

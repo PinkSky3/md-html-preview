@@ -1,7 +1,6 @@
 
-import React, { useRef, useEffect, forwardRef } from 'react';
-import { Platform, Keyboard, KeyboardAvoidingView } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import React, { useRef, useEffect, useState, forwardRef } from 'react';
+import { Platform, Keyboard, KeyboardAvoidingView, Animated } from 'react-native';
 
 const KeyboardAvoidingAnimatedView = forwardRef((props, ref) => {
   const {
@@ -15,10 +14,11 @@ const KeyboardAvoidingAnimatedView = forwardRef((props, ref) => {
     ...leftoverProps
   } = props;
 
-  const animatedViewRef = useRef(null); // ref to animated view in this polyfill
-  const initialHeightRef = useRef(0); // original height of animated view before keyboard appears
-  const bottomRef = useRef(0); // current bottom offset value of animated view
-  const bottomHeight = useSharedValue(0); // whats going to be added to the bottom when keyboard appears
+  const animatedViewRef = useRef(null);
+  const initialHeightRef = useRef(0);
+  const initialHeight = useRef(new Animated.Value(1)).current;
+  const bottomHeight = useRef(new Animated.Value(0)).current;
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
     if (!enabled) return;
@@ -26,86 +26,48 @@ const KeyboardAvoidingAnimatedView = forwardRef((props, ref) => {
     const onKeyboardShow = (event) => {
       const { duration, endCoordinates } = event;
       const animatedView = animatedViewRef.current;
-
       if (!animatedView) return;
 
-      let height = 0;
-
-      // calculate how much the view needs to move up
       const keyboardY = endCoordinates.screenY - keyboardVerticalOffset;
-      height = Math.max(animatedView.y + animatedView.height - keyboardY, 0);
+      const height = Math.max(animatedView.y + animatedView.height - keyboardY, 0);
 
-      bottomHeight.value = withTiming(height, {
+      Animated.timing(bottomHeight, {
+        toValue: height,
         duration: duration > 10 ? duration : 300,
-      });
-      bottomRef.current = height;
+        useNativeDriver: false,
+      }).start();
+      setIsKeyboardVisible(true);
     };
 
     const onKeyboardHide = () => {
-      bottomHeight.value = withTiming(0, { duration: 300 });
-      bottomRef.current = 0;
+      Animated.timing(bottomHeight, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+      setIsKeyboardVisible(false);
     };
 
-    const showSubscription = Keyboard.addListener('keyboardWillShow', onKeyboardShow);
-    const hideSubscription = Keyboard.addListener('keyboardWillHide', onKeyboardHide);
+    const showSub = Keyboard.addListener('keyboardWillShow', onKeyboardShow);
+    const hideSub = Keyboard.addListener('keyboardWillHide', onKeyboardHide);
 
     return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
+      showSub.remove();
+      hideSub.remove();
     };
   }, [keyboardVerticalOffset, enabled, bottomHeight]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    if (behavior === 'height') {
-      return {
-        height: initialHeightRef.current - bottomHeight.value,
-        flex: bottomHeight.value > 0 ? 0 : null,
-      };
-    }
-    if (behavior === 'padding') {
-      return {
-        paddingBottom: bottomHeight.value,
-      };
-    }
-    return {};
-  });
-
-  const positionAnimatedStyle = useAnimatedStyle(() => ({
-    bottom: bottomHeight.value,
-  }));
-
-  const handleLayout = (event) => {
-    const layout = event.nativeEvent.layout;
-    animatedViewRef.current = layout;
-
-    // initial height before keybaord appears
-    if (!initialHeightRef.current) {
-      initialHeightRef.current = layout.height;
-    }
-
-    if (onLayout) {
-      onLayout(event);
-    }
-  };
 
   const renderContent = () => {
     if (behavior === 'position') {
       return (
-        <Animated.View
-          style={[
-            contentContainerStyle,
-            positionAnimatedStyle,
-          ]}
-        >
+        <Animated.View style={[contentContainerStyle, { bottom: bottomHeight }]}>
           {children}
         </Animated.View>
       );
     }
-    // render children if padding or height
     return children;
   };
 
-  // for web, default to unused keyboard avoiding view
   if (Platform.OS === 'web') {
     return (
       <KeyboardAvoidingView
@@ -122,8 +84,23 @@ const KeyboardAvoidingAnimatedView = forwardRef((props, ref) => {
   return (
     <Animated.View
       ref={ref}
-      style={[style, animatedStyle]}
-      onLayout={handleLayout}
+      style={[
+        style,
+        behavior === 'height' && {
+          height: Animated.subtract(initialHeight, bottomHeight),
+          flex: isKeyboardVisible ? 0 : null,
+        },
+        behavior === 'padding' && { paddingBottom: bottomHeight },
+      ]}
+      onLayout={(e) => {
+        const layout = e.nativeEvent.layout;
+        animatedViewRef.current = layout;
+        if (initialHeightRef.current === 0) {
+          initialHeightRef.current = layout.height;
+          initialHeight.setValue(layout.height);
+        }
+        if (onLayout) onLayout(e);
+      }}
       {...leftoverProps}
     >
       {renderContent()}

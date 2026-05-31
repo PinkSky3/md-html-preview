@@ -33,6 +33,19 @@ jobs:
           sed -i '/defaultConfig {/a\            externalNativeBuild {\n                cmake {\n                    arguments("-DCMAKE_CXX_STANDARD=20", "-DCMAKE_CXX_STANDARD_REQUIRED=ON")\n                }\n            }' android/app/build.gradle.kts
         fi
 
+    - name: Remove MobileAdsInitProvider (Huawei/GMS compat)
+      run: |
+        # GMA SDK's MobileAdsInitProvider auto-initializes Google Mobile Ads at
+        # app startup, which crashes on devices without Google Play Services
+        # (e.g. Huawei/HarmonyOS). Inject a manifest merge rule to remove it.
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST" ]; then
+          APP_ID=$(grep 'applicationId ' android/app/build.gradle | head -1 | sed "s/.*applicationId *['\"]\(.*\)['\"].*/\1/" || echo "xyz.create.CreateExpoEnvironment")
+          LINE='        <provider android:name="com.google.android.gms.ads.MobileAdsInitProvider" android:authorities="'"${APP_ID}"'.mobileadsinitprovider" tools:node="remove" />'
+          sed -i "/<\/application>/i\\${LINE}" "$MANIFEST"
+          echo "Patched $MANIFEST (appId=$APP_ID)"
+        fi
+
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:

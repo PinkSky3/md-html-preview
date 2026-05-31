@@ -46,6 +46,18 @@ jobs:
           echo "Patched $MANIFEST (appId=$APP_ID)"
         fi
 
+    - name: Remove stale expo-secure-store manifest references
+      run: |
+        # expo-secure-store's config plugin previously added
+        # dataExtractionRules/fullBackupContent attributes to <application>.
+        # If the module was removed but the manifest still references the
+        # (now-missing) XML resources, AAPT linking fails.
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST" ]; then
+          sed -i '/android:dataExtractionRules\|android:fullBackupContent/d' "$MANIFEST"
+          echo "Cleaned $MANIFEST (secure-store attributes removed)"
+        fi
+
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:

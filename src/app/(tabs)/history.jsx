@@ -204,7 +204,11 @@ export default function HistoryScreen() {
         <FlatList
           data={history}
           renderItem={renderItem}
-          keyExtractor={(item, index) => `${item.timestamp ?? index}`}
+          keyExtractor={(item, index) =>
+            item.timestamp
+              ? `${item.fileName ?? item.file_name ?? ''}-${item.timestamp}`
+              : `${index}`
+          }
           contentContainerStyle={{ padding: 20, paddingTop: 12 }}
           showsVerticalScrollIndicator={false}
         />

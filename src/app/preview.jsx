@@ -158,6 +158,7 @@ export default function PreviewScreen() {
   const darkMode = useAppSettings((s) => s.darkMode);
   const theme = useTheme();
   const t = useTranslation(language);
+  const errorRead = t.errorRead;
 
   const [content, setContent] = useState(null); // null = not yet loaded
   const [loading, setLoading] = useState(true);
@@ -190,11 +191,11 @@ export default function PreviewScreen() {
       setWebviewKey((k) => k + 1);
     } catch (err) {
       console.error("Error reading file:", err);
-      setError(t.errorRead + "\n\n" + err.message);
+      setError(errorRead + "\n\n" + err.message);
     } finally {
       setLoading(false);
     }
-  }, [uri, t.errorRead]);
+  }, [uri, errorRead]);
 
   useEffect(() => {
     loadFile();
@@ -244,7 +245,7 @@ export default function PreviewScreen() {
         <WebView
           key={webviewKey}
           ref={webviewRef}
-          originWhitelist={["*"]}
+          originWhitelist={[]}
           source={webviewSource}
           style={{ flex: 1, backgroundColor: theme.bg }}
           // ── JS & DOM ──────────────────────────────────────────────────────
@@ -255,7 +256,7 @@ export default function PreviewScreen() {
           mediaPlaybackRequiresUserAction={false}
           allowsFullscreenVideo={true}
           // ── Android specifics ─────────────────────────────────────────────
-          mixedContentMode="always"
+          mixedContentMode="never"
           androidHardwareAccelerationDisabled={false}
           overScrollMode="never"
           // ── iOS specifics ─────────────────────────────────────────────────

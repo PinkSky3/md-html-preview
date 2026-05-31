@@ -7,8 +7,8 @@ import {
   useRouter,
   useSitemap,
 } from 'expo-router';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ErrorBoundaryWrapper } from '../../__create/SharedErrorBoundary';
 
@@ -29,16 +29,18 @@ function NotFoundScreen() {
 
   // Force full reload on Fast Refresh - staying on the not-found page after hot reload
   // doesn't make sense since the missing page may now exist.
-  // useEffect with [] deps re-runs on Fast Refresh, but hasInitialized persists.
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
-    if (hasInitialized && typeof window !== 'undefined' &&  process.env.EXPO_PUBLIC_CREATE_ENV === 'DEVELOPMENT') {
-      window.location.reload();
+    if (Platform.OS === 'web') {
+      if (hasInitializedRef.current && process.env.EXPO_PUBLIC_CREATE_ENV === 'DEVELOPMENT') {
+        window.location.reload();
+      }
+      hasInitializedRef.current = true;
     }
-    hasInitialized = true;
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+    if (Platform.OS === 'web' && window.parent && window.parent !== window) {
       const handler = (event: MessageEvent) => {
         if (event.data.type === 'sandbox:sitemap') {
           window.removeEventListener('message', handler);
@@ -108,7 +110,7 @@ function NotFoundScreen() {
   };
 
   const handleCreatePage = useCallback(() => {
-    if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+    if (Platform.OS === 'web' && window.parent && window.parent !== window) {
       window.parent.postMessage(
         {
           type: 'sandbox:web:create',
@@ -148,7 +150,7 @@ function NotFoundScreen() {
               project. But no worries, you've got options!
             </Text>
 
-            {typeof window !== 'undefined' && window.parent && window.parent !== window && (
+            {Platform.OS === 'web' && window.parent && window.parent !== window && (
               <View style={styles.createPageContainer}>
                 <View style={styles.createPageContent}>
                   <View style={styles.createPageTextContainer}>
@@ -439,9 +441,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
-
-// Track if this module has been initialized - this flag persists across Fast Refresh
-let hasInitialized = false;
 
 export default () => {
   return (

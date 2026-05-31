@@ -80,5 +80,14 @@ export const translations = {
   },
 };
 
-export const useTranslation = (language) =>
-  translations[language] || translations.zh;
+const fallbackCache = new Map();
+
+export const useTranslation = (language) => {
+  const lang = translations[language];
+  if (!lang || lang === translations.zh) return translations.zh;
+  const cacheKey = language;
+  if (!fallbackCache.has(cacheKey)) {
+    fallbackCache.set(cacheKey, { ...translations.zh, ...lang });
+  }
+  return fallbackCache.get(cacheKey);
+};

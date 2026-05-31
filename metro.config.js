@@ -15,13 +15,11 @@ const config = getDefaultConfig(__dirname);
 config.maxWorkers = 6;
 
 const WEB_ALIASES = {
-  'expo-secure-store': path.resolve(__dirname, './polyfills/web/secureStore.web.ts'),
   'react-native-webview': path.resolve(__dirname, './polyfills/web/webview.web.tsx'),
   'react-native-safe-area-context': path.resolve(
     __dirname,
     './polyfills/web/safeAreaContext.web.jsx'
   ),
-  'react-native-maps': path.resolve(__dirname, './polyfills/web/maps.web.jsx'),
   'react-native-web/dist/exports/SafeAreaView': path.resolve(
     __dirname,
     './polyfills/web/SafeAreaView.web.jsx'
@@ -32,15 +30,8 @@ const WEB_ALIASES = {
     './polyfills/web/refreshControl.web.tsx'
   ),
   'expo-status-bar': path.resolve(__dirname, './polyfills/web/statusBar.web.tsx'),
-  'expo-location': path.resolve(__dirname, './polyfills/web/location.web.ts'),
   './layouts/Tabs': path.resolve(__dirname, './polyfills/web/tabbar.web.jsx'),
-  'expo-notifications': path.resolve(__dirname, './polyfills/web/notifications.web.tsx'),
-  'expo-contacts': path.resolve(__dirname, './polyfills/web/contacts.web.ts'),
   'expo-font': path.resolve(__dirname, './polyfills/web/expo-font.web.ts'),
-  'react-native-google-mobile-ads': path.resolve(
-    __dirname,
-    './polyfills/web/google-mobile-ads.web.tsx'
-  ),
   'react-native-web/dist/exports/ScrollView': path.resolve(
     __dirname,
     './polyfills/web/scrollview.web.jsx'
@@ -51,22 +42,6 @@ const NATIVE_ALIASES = {
     __dirname,
     './polyfills/native/textinput.native.jsx'
   ),
-  'react-native-google-mobile-ads': path.resolve(
-    __dirname,
-    './polyfills/native/google-mobile-ads.native.tsx'
-  ),
-};
-// Aliases that only apply outside production. The real packages crash on
-// import in Expo Go preview (their browser-mode shims pull in DOM-only code
-// that throws on Hermes), which makes expo-router silently swallow the load
-// error and warn "Route is missing the required default export" — leaving
-// the app on a black/splash screen. EAS production builds keep the real
-// modules so paid users hit the native SDKs as normal.
-const DEV_ONLY_NATIVE_ALIASES = {
-  'react-native-purchases': path.resolve(
-    __dirname,
-    './polyfills/native/react-native-purchases.native.tsx'
-  ),
 };
 const SHARED_ALIASES = {
   'expo-image': path.resolve(__dirname, './polyfills/shared/expo-image.tsx'),
@@ -75,8 +50,17 @@ fs.mkdirSync(VIRTUAL_ROOT_UNRESOLVED, { recursive: true });
 config.watchFolders = [...config.watchFolders, VIRTUAL_ROOT, VIRTUAL_ROOT_UNRESOLVED];
 
 // Add web-specific alias configuration through resolveRequest
+// Support @/ path alias from tsconfig.json
+const SRC_DIR = path.resolve(__dirname, 'src');
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   try {
+    // Resolve @/ path alias → src/
+    if (moduleName.startsWith('@/')) {
+      const localPath = path.resolve(SRC_DIR, moduleName.slice(2));
+      return context.resolveRequest(context, localPath, platform);
+    }
+
     // Polyfills are not resolved by Metro
     if (
       context.originModulePath.startsWith(`${__dirname}/polyfills/native`) ||
@@ -114,17 +98,6 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
     if (NATIVE_ALIASES[moduleName] && !moduleName.startsWith('./polyfills/')) {
       return context.resolveRequest(context, NATIVE_ALIASES[moduleName], platform);
-    }
-    if (
-      DEV_ONLY_NATIVE_ALIASES[moduleName] &&
-      !moduleName.startsWith('./polyfills/') &&
-      process.env.EXPO_PUBLIC_CREATE_ENV !== 'PRODUCTION'
-    ) {
-      return context.resolveRequest(
-        context,
-        DEV_ONLY_NATIVE_ALIASES[moduleName],
-        platform
-      );
     }
     return context.resolveRequest(context, moduleName, platform);
   } catch (error) {

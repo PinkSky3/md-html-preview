@@ -6,19 +6,13 @@
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [],
-      "package": "xyz.create.CreateExpoEnvironment"
+      "package": "com.anything.app"
     },
     "plugins": [
       [
@@ -37,18 +31,10 @@
       ],
       [
         "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
+        {}
       ],
       "expo-font"
     ],
-    "web": {
-      "bundler": "metro",
-      "favicon": "./assets/images/favicon.png"
-    },
     "experiments": {
       "typedRoutes": true
     },

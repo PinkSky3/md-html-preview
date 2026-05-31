@@ -20,6 +20,9 @@ jobs:
     - name: Install dependencies
       run: npm install --legacy-peer-deps --prefer-offline
 
+    - name: Clean stale android dir for fresh prebuild
+      run: rm -rf android/
+
     - name: Prebuild Expo project
       run: npx expo prebuild --no-install
 
@@ -31,31 +34,6 @@ jobs:
           sed -i '/defaultConfig {/a\            externalNativeBuild {\n                cmake {\n                    arguments "-DCMAKE_CXX_STANDARD=20", "-DCMAKE_CXX_STANDARD_REQUIRED=ON"\n                }\n            }' android/app/build.gradle
         elif [ -f android/app/build.gradle.kts ]; then
           sed -i '/defaultConfig {/a\            externalNativeBuild {\n                cmake {\n                    arguments("-DCMAKE_CXX_STANDARD=20", "-DCMAKE_CXX_STANDARD_REQUIRED=ON")\n                }\n            }' android/app/build.gradle.kts
-        fi
-
-    - name: Remove MobileAdsInitProvider (Huawei/GMS compat)
-      run: |
-        # GMA SDK's MobileAdsInitProvider auto-initializes Google Mobile Ads at
-        # app startup, which crashes on devices without Google Play Services
-        # (e.g. Huawei/HarmonyOS). Inject a manifest merge rule to remove it.
-        MANIFEST="android/app/src/main/AndroidManifest.xml"
-        if [ -f "$MANIFEST" ]; then
-          APP_ID=$(grep 'applicationId ' android/app/build.gradle | head -1 | sed "s/.*applicationId *['\"]\(.*\)['\"].*/\1/" || echo "xyz.create.CreateExpoEnvironment")
-          LINE='        <provider android:name="com.google.android.gms.ads.MobileAdsInitProvider" android:authorities="'"${APP_ID}"'.mobileadsinitprovider" tools:node="remove" />'
-          sed -i "/<\/application>/i\\${LINE}" "$MANIFEST"
-          echo "Patched $MANIFEST (appId=$APP_ID)"
-        fi
-
-    - name: Remove stale expo-secure-store manifest references
-      run: |
-        # expo-secure-store's config plugin previously added
-        # dataExtractionRules/fullBackupContent attributes to <application>.
-        # If the module was removed but the manifest still references the
-        # (now-missing) XML resources, AAPT linking fails.
-        MANIFEST="android/app/src/main/AndroidManifest.xml"
-        if [ -f "$MANIFEST" ]; then
-          sed -i '/android:dataExtractionRules\|android:fullBackupContent/d' "$MANIFEST"
-          echo "Cleaned $MANIFEST (secure-store attributes removed)"
         fi
 
     - name: Setup ccache

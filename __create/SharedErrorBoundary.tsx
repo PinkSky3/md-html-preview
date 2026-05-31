@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, Platform, Text, View } from 'react-native';
 
 export function SharedErrorBoundary({
   isOpen,
@@ -150,7 +150,9 @@ function InternalErrorBoundary({
       errorArg instanceof Error
         ? `${errorArg.message}\n\n${errorArg.stack}`
         : JSON.stringify(errorArg, null, 2);
-    navigator.clipboard.writeText(text);
+    if (Platform.OS === 'web') {
+      navigator.clipboard.writeText(text);
+    }
     setIsOpen(false);
   }, [errorArg]);
 
@@ -181,10 +183,12 @@ function InternalErrorBoundary({
       }
       postCountRef.current += 1;
       lastPostTimeRef.current = Date.now();
-      window.parent.postMessage(
-        { type: 'sandbox:error:detected', error: errorArg },
-        '*'
-      );
+      if (Platform.OS === 'web') {
+        window.parent.postMessage(
+          { type: 'sandbox:error:detected', error: errorArg },
+          '*'
+        );
+      }
     };
 
     if (timeSinceLastPost < THROTTLE_MS) {
@@ -196,6 +200,7 @@ function InternalErrorBoundary({
   }, [errorArg]);
 
   function isInIframe() {
+    if (Platform.OS !== 'web') return false;
     try {
       return window.parent !== window;
     } catch {

@@ -26,6 +26,7 @@ export default function HomeScreen() {
   const toggleDarkMode = useAppSettings((s) => s.toggleDarkMode);
   const theme = useTheme();
   const t = useTranslation(language);
+  const errorPick = t.errorPick;
 
   const pickFile = useCallback(async () => {
     try {
@@ -64,9 +65,9 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error("Pick file error:", error);
-      Alert.alert(t.errorPick, String(error.message));
+      Alert.alert(errorPick, String(error.message));
     }
-  }, [router, t]);
+  }, [router, errorPick]);
 
   const otherLang = language === "zh" ? "en" : "zh";
   const otherLangLabel = language === "zh" ? "EN" : "中";

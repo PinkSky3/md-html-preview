@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
 import { FileText, FileCode, ChevronRight, Clock } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { formatDistanceToNow } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { useAppSettings, useTheme } from "@/utils/useAppSettings";
 import { useTranslation } from "@/utils/i18n";
+import { loadHistory } from "@/utils/historyStore";
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
@@ -22,46 +23,56 @@ export default function HistoryScreen() {
   const theme = useTheme();
   const t = useTranslation(language);
 
-  const {
-    data: history = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["history"],
-    queryFn: async () => {
-      const response = await fetch("/api/history");
-      if (!response.ok) throw new Error("Failed to fetch history");
-      return response.json();
-    },
-  });
+  const [history, setHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const items = await loadHistory();
+      setHistory(items);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchHistory();
+    }, [fetchHistory])
+  );
 
   const renderItem = ({ item }) => {
-    const isMd = item.file_type === "md";
+    const isMd = item.fileType === "md" || item.file_type === "md";
     const Icon = isMd ? FileText : FileCode;
     const iconColor = isMd ? theme.mdColor : theme.htmlColor;
     const iconBg = isMd ? theme.mdBg : theme.htmlBg;
 
+    const ts = item.timestamp ?? item.created_at;
     let timeAgo = "";
     try {
-      timeAgo = formatDistanceToNow(new Date(item.timestamp), {
+      timeAgo = formatDistanceToNow(new Date(ts), {
         addSuffix: true,
         locale: language === "zh" ? zhCN : undefined,
       });
     } catch {
-      timeAgo = item.timestamp;
+      timeAgo = ts;
     }
+
+    const uriString = item.uriString ?? item.uri_string;
+    const fileName = item.fileName ?? item.file_name;
+    const fileType = item.fileType ?? item.file_type;
 
     return (
       <TouchableOpacity
         onPress={() => {
           router.push({
             pathname: "/preview",
-            params: {
-              uri: item.uri_string,
-              name: item.file_name,
-              type: item.file_type,
-            },
+            params: { uri: uriString, name: fileName, type: fileType },
           });
         }}
         style={{
@@ -91,7 +102,7 @@ export default function HistoryScreen() {
             style={{ fontSize: 15, fontWeight: "600", color: theme.text }}
             numberOfLines={1}
           >
-            {item.file_name}
+            {fileName}
           </Text>
           <View
             style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}
@@ -142,7 +153,7 @@ export default function HistoryScreen() {
             {t.failedLoad}
           </Text>
           <TouchableOpacity
-            onPress={refetch}
+            onPress={fetchHistory}
             style={{
               backgroundColor: theme.primary,
               paddingHorizontal: 20,
@@ -193,7 +204,7 @@ export default function HistoryScreen() {
         <FlatList
           data={history}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => `${item.timestamp ?? index}`}
           contentContainerStyle={{ padding: 20, paddingTop: 12 }}
           showsVerticalScrollIndicator={false}
         />

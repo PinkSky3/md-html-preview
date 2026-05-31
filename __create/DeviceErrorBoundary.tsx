@@ -2,18 +2,13 @@ import { SplashScreen } from 'expo-router/build/exports';
 import * as Updates from 'expo-updates';
 import React, { type ReactNode, useCallback, useEffect } from 'react';
 import { Platform, View } from 'react-native';
-import { serializeError } from 'serialize-error';
 import { Button, SharedErrorBoundary } from './SharedErrorBoundary';
-import { reportErrorToRemote } from './report-error-to-remote';
-import { getTestFlightLogger } from './testflight-logger';
 
-type ErrorBoundaryState = { hasError: boolean; error: unknown | null; sentLogs: boolean };
+type ErrorBoundaryState = { hasError: boolean; error: unknown | null };
 
 const DeviceErrorBoundary = ({
-  sentLogs,
   errorMessage,
 }: {
-  sentLogs: boolean;
   errorMessage?: string;
 }) => {
   useEffect(() => {
@@ -26,13 +21,13 @@ const DeviceErrorBoundary = ({
     }
 
     Updates.reloadAsync().catch((error) => {
-      // no-op, we don't want to show an error here
+      // no-op
     });
   }, []);
   return (
     <SharedErrorBoundary
       isOpen
-      description={`${sentLogs ? 'Error has been reported. ' : ''}${errorMessage ? `\n\n${errorMessage}` : 'It looks like an error occurred while trying to use your app.'}`}
+      description={`${errorMessage ? `\n\n${errorMessage}` : 'It looks like an error occurred while trying to use your app.'}`}
     >
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Button color="primary" onPress={handleReload}>
@@ -49,31 +44,19 @@ export class DeviceErrorBoundaryWrapper extends React.Component<
   },
   ErrorBoundaryState
 > {
-  state: ErrorBoundaryState = { hasError: false, error: null, sentLogs: false };
+  state: ErrorBoundaryState = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
-    return { hasError: true, error, sentLogs: false };
+    return { hasError: true, error };
   }
   componentDidCatch(error: unknown, errorInfo: React.ErrorInfo): void {
     this.setState({ error });
-    const logger = getTestFlightLogger();
-    if (logger) {
-      const serialized = serializeError(error);
-      logger.logError(`[ERROR_BOUNDARY] ${serialized.message ?? JSON.stringify(serialized)}`);
-    }
-    reportErrorToRemote({ error })
-      .then(({ success, error: fetchError }) => {
-        this.setState({ hasError: true, sentLogs: success });
-      })
-      .catch((reportError) => {
-        this.setState({ hasError: true, sentLogs: false });
-      });
   }
 
   render() {
     if (this.state.hasError) {
       const errMsg = this.state.error instanceof Error ? this.state.error.message : undefined;
-      return <DeviceErrorBoundary sentLogs={this.state.sentLogs} errorMessage={errMsg} />;
+      return <DeviceErrorBoundary errorMessage={errMsg} />;
     }
     return this.props.children;
   }

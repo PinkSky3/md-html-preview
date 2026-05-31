@@ -6,7 +6,6 @@ import React, {
   useRef,
 } from 'react';
 import { Animated, Text, View } from 'react-native';
-import { isErrorLike, serializeError } from 'serialize-error';
 
 export function SharedErrorBoundary({
   isOpen,
@@ -147,10 +146,10 @@ function InternalErrorBoundary({
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const handleCopyError = useCallback(() => {
-    const serializedError = serializeError(errorArg);
-    const text = isErrorLike(serializedError)
-      ? `${serializedError.message}\n\n${serializedError.stack}`
-      : JSON.stringify(serializedError, null, 2);
+    const text =
+      errorArg instanceof Error
+        ? `${errorArg.message}\n\n${errorArg.stack}`
+        : JSON.stringify(errorArg, null, 2);
     navigator.clipboard.writeText(text);
     setIsOpen(false);
   }, [errorArg]);
@@ -162,8 +161,7 @@ function InternalErrorBoundary({
   const THROTTLE_MS = 1000;
 
   useEffect(() => {
-    const serialized = serializeError(errorArg);
-    const errorKey = JSON.stringify(serialized);
+    const errorKey = JSON.stringify(errorArg);
 
     if (errorKey !== lastErrorKeyRef.current) {
       lastErrorKeyRef.current = errorKey;
@@ -184,7 +182,7 @@ function InternalErrorBoundary({
       postCountRef.current += 1;
       lastPostTimeRef.current = Date.now();
       window.parent.postMessage(
-        { type: 'sandbox:error:detected', error: serialized },
+        { type: 'sandbox:error:detected', error: errorArg },
         '*'
       );
     };

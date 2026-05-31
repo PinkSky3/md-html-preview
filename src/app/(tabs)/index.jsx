@@ -11,15 +11,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { FileText, FileCode, Upload, Moon, Sun } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppSettings, useTheme } from "@/utils/useAppSettings";
 import { useTranslation } from "@/utils/i18n";
 import { cacheFileContent } from "@/utils/fileContentCache";
+import { saveHistory } from "@/utils/historyStore";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const language = useAppSettings((s) => s.language);
   const darkMode = useAppSettings((s) => s.darkMode);
@@ -27,21 +26,6 @@ export default function HomeScreen() {
   const toggleDarkMode = useAppSettings((s) => s.toggleDarkMode);
   const theme = useTheme();
   const t = useTranslation(language);
-
-  const saveHistoryMutation = useMutation({
-    mutationFn: async (fileData) => {
-      const response = await fetch("/api/history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fileData),
-      });
-      if (!response.ok) throw new Error("Failed to save history");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["history"] });
-    },
-  });
 
   const pickFile = useCallback(async () => {
     try {
@@ -67,7 +51,7 @@ export default function HomeScreen() {
           }
         }
 
-        saveHistoryMutation.mutate({
+        saveHistory({
           fileName: file.name,
           uriString: file.uri,
           fileType,
@@ -82,7 +66,7 @@ export default function HomeScreen() {
       console.error("Pick file error:", error);
       Alert.alert(t.errorPick, String(error.message));
     }
-  }, [router, saveHistoryMutation, t]);
+  }, [router, t]);
 
   const otherLang = language === "zh" ? "en" : "zh";
   const otherLangLabel = language === "zh" ? "EN" : "中";

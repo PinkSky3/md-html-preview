@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppSettings, useTheme } from "@/utils/useAppSettings";
 import { useTranslation } from "@/utils/i18n";
 import { getCachedContent } from "@/utils/fileContentCache";
+import { marked } from "marked";
 
 // ─── File reader ─────────────────────────────────────────────────────────────
 // Priority: in-memory cache → native FileSystem → web fetch
@@ -88,8 +89,9 @@ function buildDarkModeJS(enabled) {
 }
 
 // ─── Markdown HTML template ─────────────────────────────────────────────────
-// We build our own full HTML page for .md files (no dynamic effects to worry about)
-function buildMdHtml(content, darkMode) {
+// Takes pre-rendered HTML (parsed by `marked` in the RN JS layer) and wraps
+// it in a full page with syntax‑highlight‑friendly CSS.
+function buildMdHtml(htmlContent, darkMode) {
   const bg = darkMode ? "#0f172a" : "#ffffff";
   const fg = darkMode ? "#e2e8f0" : "#24292f";
   const codeBg = darkMode ? "#1e293b" : "#f6f8fa";
@@ -100,14 +102,11 @@ function buildMdHtml(content, darkMode) {
   const tblAlt = darkMode ? "#1e293b" : "#f6f8fa";
   const inlineCode = darkMode ? "#f472b6" : "#d63384";
 
-  const safe = JSON.stringify(content); // safe embed — handles all special chars
-
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html{overflow-x:hidden}
@@ -143,16 +142,7 @@ del{opacity:.6}
 </style>
 </head>
 <body>
-<div id="c"></div>
-<script>
-try{
-  var md=${safe};
-  document.getElementById('c').innerHTML=marked.parse(md);
-}catch(e){
-  document.getElementById('c').innerHTML=
-    '<p style="color:#ef4444">渲染失败 / Render error: '+e.message+'</p>';
-}
-<\/script>
+${htmlContent}
 </body>
 </html>`;
 }
@@ -231,12 +221,13 @@ export default function PreviewScreen() {
   }, []);
 
   // ── Determine WebView source ──────────────────────────────────────────────
+  const renderedMdHtml = content && type === "md" ? marked.parse(content) : null;
   const webviewSource =
     content === null
       ? null
       : type === "md"
-        ? { html: buildMdHtml(content, darkMode) } // our own template — safe to bake darkMode in
-        : { html: content }; // raw HTML — NEVER modified
+        ? { html: buildMdHtml(renderedMdHtml, darkMode) }
+        : { html: content };
 
   const showWebView = !loading && !error && content !== null;
 

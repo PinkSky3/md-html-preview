@@ -1,9 +1,8 @@
-import { File, Paths } from 'expo-file-system';
-
 const LOG_FILE = 'startup_crash.json';
 
 function writeSync(data: Record<string, unknown>): void {
   try {
+    const { File, Paths } = require('expo-file-system');
     const dir = Paths.cache;
     const file = new File(dir, LOG_FILE);
     if (file.exists) file.delete();
@@ -44,4 +43,7 @@ if (typeof globalThis.onunhandledrejection !== 'undefined') {
   };
 }
 
-writeSync({ type: 'STARTUP', message: 'App started', time: Date.now() });
+// Defer initial startup write to avoid crashing during native module init
+setTimeout(() => {
+  writeSync({ type: 'STARTUP', message: 'App started', time: Date.now() });
+}, 100);

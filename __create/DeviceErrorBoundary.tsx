@@ -1,7 +1,6 @@
 import { SplashScreen } from 'expo-router/build/exports';
-import * as Updates from 'expo-updates';
 import React, { type ReactNode, useCallback, useEffect } from 'react';
-import { Platform, View } from 'react-native';
+import { NativeModules, Platform, View } from 'react-native';
 import { Button, SharedErrorBoundary } from './SharedErrorBoundary';
 
 type ErrorBoundaryState = { hasError: boolean; error: unknown | null };
@@ -20,9 +19,14 @@ const DeviceErrorBoundary = ({
       return;
     }
 
-    Updates.reloadAsync().catch((error) => {
-      // no-op
-    });
+    try {
+      const DevSettings = NativeModules.DevSettings;
+      if (DevSettings?.reload) {
+        DevSettings.reload();
+      }
+    } catch {
+      // No reload available in production build
+    }
   }, []);
   return (
     <SharedErrorBoundary

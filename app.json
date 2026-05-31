@@ -31,7 +31,11 @@
       ],
       [
         "expo-build-properties",
-        {}
+        {
+          "android": {
+            "newArchEnabled": true
+          }
+        }
       ],
       "expo-font"
     ],

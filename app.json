@@ -17,10 +17,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ],
+      "permissions": [],
       "package": "xyz.create.CreateExpoEnvironment"
     },
     "plugins": [
@@ -38,7 +35,6 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-audio",
       [
         "expo-build-properties",
         {
@@ -47,13 +43,7 @@
           }
         }
       ],
-      [
-        "expo-video",
-        { "supportsBackgroundPlayback": true, "supportsPictureInPicture": true }
-      ],
-      "expo-font",
-      "expo-secure-store",
-      "expo-web-browser"
+      "expo-font"
     ],
     "web": {
       "bundler": "metro",
